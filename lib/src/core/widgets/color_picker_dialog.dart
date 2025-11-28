@@ -108,7 +108,8 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
                 itemCount: _predefinedColors.length,
                 itemBuilder: (context, index) {
                   final color = _predefinedColors[index];
-                  final isSelected = _selectedColor.value == color.value;
+                  final isSelected =
+                      _selectedColor.toARGB32() == color.toARGB32();
 
                   return GestureDetector(
                     onTap: () => setState(() => _selectedColor = color),
@@ -157,40 +158,40 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
               ),
               const SizedBox(height: 12),
 
-              _buildColorSlider('Red', Color(_selectedColor.value).red, (
+              _buildColorSlider('Red', (_selectedColor.r * 255).round(), (
                 value,
               ) {
                 setState(() {
                   _selectedColor = Color.fromARGB(
                     255,
                     value.toInt(),
-                    Color(_selectedColor.value).green,
-                    Color(_selectedColor.value).blue,
+                    (_selectedColor.g * 255).round(),
+                    (_selectedColor.b * 255).round(),
                   );
                 });
               }),
 
-              _buildColorSlider('Green', Color(_selectedColor.value).green, (
+              _buildColorSlider('Green', (_selectedColor.g * 255).round(), (
                 value,
               ) {
                 setState(() {
                   _selectedColor = Color.fromARGB(
                     255,
-                    Color(_selectedColor.value).red,
+                    (_selectedColor.r * 255).round(),
                     value.toInt(),
-                    Color(_selectedColor.value).blue,
+                    (_selectedColor.b * 255).round(),
                   );
                 });
               }),
 
-              _buildColorSlider('Blue', Color(_selectedColor.value).blue, (
+              _buildColorSlider('Blue', (_selectedColor.b * 255).round(), (
                 value,
               ) {
                 setState(() {
                   _selectedColor = Color.fromARGB(
                     255,
-                    Color(_selectedColor.value).red,
-                    Color(_selectedColor.value).green,
+                    (_selectedColor.r * 255).round(),
+                    (_selectedColor.g * 255).round(),
                     value.toInt(),
                   );
                 });

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'
+    hide AuthState; // Added Supabase import
 import 'package:habit_tracker/app_state.dart';
 import 'package:habit_tracker/src/core/di/injection.dart';
 import 'package:habit_tracker/src/core/theme/neo_brutalist_border.dart';
@@ -10,9 +12,22 @@ import 'package:habit_tracker/src/core/widgets/color_picker_dialog.dart';
 import 'package:uuid/uuid.dart' as uuid_gen;
 import 'package:file_picker/file_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:habit_tracker/src/features/habits/widgets/betting_dialog.dart';
+import 'package:habit_tracker/src/features/habits/widgets/proof_dialog.dart';
+import 'package:habit_tracker/src/features/habits/widgets/fire_animation_dialog.dart';
+import 'package:habit_tracker/src/features/leaderboard/shame_leaderboard_screen.dart';
+import 'package:habit_tracker/src/features/wellbeing/screens/zen_radio_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Supabase
+  // TODO: Replace with your actual Supabase URL and Anon Key
+  await Supabase.initialize(
+    url: 'YOUR_SUPABASE_URL',
+    anonKey: 'YOUR_SUPABASE_ANON_KEY',
+  );
+
   if (!kIsWeb) {
     await configureDependencies();
   }
@@ -213,7 +228,32 @@ class _ZenFlowLoFiMainScreenState extends State<ZenFlowLoFiMainScreen> {
   int _currentIndex = 0;
 
   void _toggleHabit(int index) {
-    context.read<ZenFlowAppState>().toggleHabit(index);
+    final app = context.read<ZenFlowAppState>();
+    final habit = app.habits[index];
+
+    if (habit.isBetActive && !habit.completed) {
+      showDialog(
+        context: context,
+        builder: (context) => ProofDialog(
+          onProofSubmitted: (path) {
+            // Verify proof via service (mocked for now)
+            // Then toggle
+            app.toggleHabit(index);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Proof uploaded! Streak saved.')),
+            );
+
+            // Show Fire Animation
+            showDialog(
+              context: context,
+              builder: (context) => const FireAnimationDialog(),
+            );
+          },
+        ),
+      );
+    } else {
+      app.toggleHabit(index);
+    }
   }
 
   void _addHabit(String title, String frequency, int accentHex) {
@@ -241,6 +281,7 @@ class _ZenFlowLoFiMainScreenState extends State<ZenFlowLoFiMainScreen> {
         onDeleteHabit: (index) =>
             context.read<ZenFlowAppState>().deleteHabit(index),
       ),
+      const ShameLeaderboardScreen(),
       const LoFiChallengesScreen(),
       const LoFiJournalScreen(),
       const LoFiWellbeingScreen(),
@@ -259,10 +300,11 @@ class _ZenFlowLoFiMainScreenState extends State<ZenFlowLoFiMainScreen> {
             children: [
               _buildLoFiNavItem(Icons.dashboard_outlined, 'Dashboard', 0),
               _buildLoFiNavItem(Icons.check_circle_outline, 'Habits', 1),
-              _buildLoFiNavItem(Icons.emoji_events_outlined, 'Challenges', 2),
-              _buildLoFiNavItem(Icons.book_outlined, 'Journal', 3),
-              _buildLoFiNavItem(Icons.favorite_outline, 'Wellbeing', 4),
-              _buildLoFiNavItem(Icons.person_outline, 'Profile', 5),
+              _buildLoFiNavItem(Icons.warning_amber_rounded, 'Shame', 2),
+              _buildLoFiNavItem(Icons.emoji_events_outlined, 'Challenges', 3),
+              _buildLoFiNavItem(Icons.book_outlined, 'Journal', 4),
+              _buildLoFiNavItem(Icons.favorite_outline, 'Wellbeing', 5),
+              _buildLoFiNavItem(Icons.person_outline, 'Profile', 6),
             ],
           ),
         ),
@@ -731,6 +773,39 @@ class LoFiHabitsScreen extends StatelessWidget {
                   size: 18,
                 ),
               ),
+              if (!habit.isBetActive)
+                IconButton(
+                  tooltip: 'bet streak',
+                  onPressed: () => _showBettingDialog(context, index),
+                  icon: const Icon(
+                    Icons.monetization_on_outlined,
+                    color: Colors.black,
+                    size: 18,
+                  ),
+                )
+              else
+                Tooltip(
+                  message: 'Bet Active: ₹${habit.betAmount}',
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department,
+                          color: Colors.orange,
+                          size: 18,
+                        ),
+                        Text(
+                          '₹${habit.betAmount.toInt()}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ],
@@ -790,7 +865,9 @@ class LoFiHabitsScreen extends StatelessWidget {
                         ColorPickerDialog(initialColor: Color(chosenAccent)),
                   );
                   if (selectedColor != null) {
-                    setDialogState(() => chosenAccent = selectedColor.value);
+                    setDialogState(
+                      () => chosenAccent = selectedColor.toARGB32(),
+                    );
                   }
                 },
                 child: Container(
@@ -811,7 +888,7 @@ class LoFiHabitsScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Choose Color',
+                        'pick color',
                         style: TextStyle(
                           color: Color(chosenAccent).computeLuminance() > 0.5
                               ? Colors.black
@@ -838,7 +915,7 @@ class LoFiHabitsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            ElevatedButton(
+            NeoBrutalistButton(
               onPressed: () {
                 if (controller.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -852,13 +929,30 @@ class LoFiHabitsScreen extends StatelessWidget {
                   SnackBar(content: Text('"${controller.text.trim()}" added.')),
                 );
               },
+              backgroundColor: Colors.black,
               child: const Text(
-                'add',
-                style: TextStyle(fontWeight: FontWeight.w300, letterSpacing: 1),
+                'create',
+                style: TextStyle(color: Colors.white),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showBettingDialog(BuildContext context, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => BettingDialog(
+        onPlaceBet: (amount, supervisor, phone) {
+          context.read<ZenFlowAppState>().placeBet(
+            index,
+            amount,
+            supervisor,
+            phone,
+          );
+        },
       ),
     );
   }
@@ -914,7 +1008,9 @@ class LoFiHabitsScreen extends StatelessWidget {
                         ColorPickerDialog(initialColor: Color(chosenAccent)),
                   );
                   if (selectedColor != null) {
-                    setDialogState(() => chosenAccent = selectedColor.value);
+                    setDialogState(
+                      () => chosenAccent = selectedColor.toARGB32(),
+                    );
                   }
                 },
                 child: Container(
@@ -1764,6 +1860,12 @@ class _LoFiWellbeingScreenState extends State<LoFiWellbeingScreen> {
   }
 
   void _onSupportAction(String label) {
+    if (label == 'launch zen radio') {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const ZenRadioScreen()));
+      return;
+    }
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('$label activated.')));
@@ -1861,6 +1963,12 @@ class _LoFiProfileScreenState extends State<LoFiProfileScreen> {
   }
 
   Widget _buildIdentityCard() {
+    final auth = context.watch<AuthState>();
+    final name = auth.displayName ?? 'Guest User';
+    final initials = name.isNotEmpty
+        ? name.split(' ').take(2).map((e) => e[0].toUpperCase()).join()
+        : 'GU';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1878,7 +1986,7 @@ class _LoFiProfileScreenState extends State<LoFiProfileScreen> {
             ),
             alignment: Alignment.center,
             child: Text(
-              _userName.split(' ').map((e) => e[0].toUpperCase()).join(),
+              initials,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
@@ -1888,7 +1996,7 @@ class _LoFiProfileScreenState extends State<LoFiProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _userName,
+                  name,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1897,11 +2005,16 @@ class _LoFiProfileScreenState extends State<LoFiProfileScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _userBio,
+                  auth.email ?? 'No email',
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF6A6A6A),
                   ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'lo-fi architect • since 2024',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF6A6A6A)),
                 ),
               ],
             ),

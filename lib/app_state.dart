@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:habit_tracker/src/features/habits/streak_bet_service.dart';
 
 class HabitItem {
   HabitItem({
@@ -10,6 +11,9 @@ class HabitItem {
     required this.streakLabel,
     required this.accentHex,
     this.completed = false,
+    this.betAmount = 0.0,
+    this.supervisorName,
+    this.isBetActive = false,
   });
 
   final String title;
@@ -18,12 +22,20 @@ class HabitItem {
   final int accentHex;
   bool completed;
 
+  // StreakOrPay Fields
+  double betAmount;
+  String? supervisorName;
+  bool isBetActive;
+
   Map<String, dynamic> toJson() => {
     'title': title,
     'frequency': frequency,
     'streak': streakLabel,
     'accent': accentHex,
     'completed': completed,
+    'betAmount': betAmount,
+    'supervisorName': supervisorName,
+    'isBetActive': isBetActive,
   };
 
   static HabitItem fromJson(Map<String, dynamic> json) => HabitItem(
@@ -32,6 +44,9 @@ class HabitItem {
     streakLabel: json['streak'] as String,
     accentHex: json['accent'] as int,
     completed: json['completed'] as bool? ?? false,
+    betAmount: (json['betAmount'] as num?)?.toDouble() ?? 0.0,
+    supervisorName: json['supervisorName'] as String?,
+    isBetActive: json['isBetActive'] as bool? ?? false,
   );
 }
 
@@ -62,6 +77,38 @@ class ZenFlowAppState extends ChangeNotifier {
     await _save();
   }
 
+  Future<void> placeBet(
+    int index,
+    double amount,
+    String supervisor,
+    String phone,
+  ) async {
+    final habit = _habits[index];
+
+    // Call Service
+    await StreakBetService().createBet(
+      habitId: habit.title, // Using title as ID for now (simple)
+      amount: amount,
+      supervisorName: supervisor,
+      supervisorPhone: phone,
+    );
+
+    // Update Local State
+    _habits[index] = HabitItem(
+      title: habit.title,
+      frequency: habit.frequency,
+      streakLabel: habit.streakLabel,
+      accentHex: habit.accentHex,
+      completed: habit.completed,
+      betAmount: amount,
+      supervisorName: supervisor,
+      isBetActive: true,
+    );
+
+    notifyListeners();
+    await _save();
+  }
+
   Future<void> editHabit(
     int index, {
     String? title,
@@ -75,6 +122,9 @@ class ZenFlowAppState extends ChangeNotifier {
       streakLabel: h.streakLabel,
       accentHex: accentHex ?? h.accentHex,
       completed: h.completed,
+      betAmount: h.betAmount,
+      supervisorName: h.supervisorName,
+      isBetActive: h.isBetActive,
     );
     notifyListeners();
     await _save();

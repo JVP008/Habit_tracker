@@ -676,82 +676,86 @@ class LoFiHabitsScreen extends StatelessWidget {
     int chosenAccent = habit.accentHex;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFFFAFAFA),
-        title: const Text(
-          'edit habit',
-          style: TextStyle(
-            color: Color(0xFF2C2C2C),
-            fontWeight: FontWeight.w300,
-            letterSpacing: 1.5,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                hintText: 'habit name',
-                hintStyle: TextStyle(color: Color(0xFF9A9A9A)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFFFAFAFA),
+            title: const Text(
+              'edit habit',
+              style: TextStyle(
+                color: Color(0xFF2C2C2C),
+                fontWeight: FontWeight.w300,
+                letterSpacing: 1.5,
               ),
             ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: frequency,
-              decoration: const InputDecoration(labelText: 'frequency'),
-              items: const [
-                DropdownMenuItem(value: 'daily', child: Text('daily')),
-                DropdownMenuItem(value: 'weekly', child: Text('weekly')),
-              ],
-              onChanged: (value) {
-                if (value != null) frequency = value;
-              },
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _accentChoice(
-                  Colors.green,
-                  chosenAccent == 0xFF00FF00,
-                  () => chosenAccent = 0xFF00FF00,
+                TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    hintText: 'habit name',
+                    hintStyle: TextStyle(color: Color(0xFF9A9A9A)),
+                  ),
                 ),
-                _accentChoice(
-                  Colors.yellow,
-                  chosenAccent == 0xFFFFFF00,
-                  () => chosenAccent = 0xFFFFFF00,
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: frequency,
+                  decoration: const InputDecoration(labelText: 'frequency'),
+                  items: const [
+                    DropdownMenuItem(value: 'daily', child: Text('daily')),
+                    DropdownMenuItem(value: 'weekly', child: Text('weekly')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) frequency = value;
+                  },
                 ),
-                _accentChoice(
-                  Colors.red,
-                  chosenAccent == 0xFFFF0000,
-                  () => chosenAccent = 0xFFFF0000,
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _accentChoice(
+                      Colors.green,
+                      chosenAccent == 0xFF00FF00,
+                      () => setState(() => chosenAccent = 0xFF00FF00),
+                    ),
+                    _accentChoice(
+                      Colors.yellow,
+                      chosenAccent == 0xFFFFFF00,
+                      () => setState(() => chosenAccent = 0xFFFFFF00),
+                    ),
+                    _accentChoice(
+                      Colors.red,
+                      chosenAccent == 0xFFFF0000,
+                      () => setState(() => chosenAccent = 0xFFFF0000),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              onEditHabit(
-                index,
-                controller.text.trim(),
-                frequency,
-                chosenAccent,
-              );
-              Navigator.pop(context);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Habit updated.')));
-            },
-            child: const Text('save'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  onEditHabit(
+                    index,
+                    controller.text.trim(),
+                    frequency,
+                    chosenAccent,
+                  );
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Habit updated.')),
+                  );
+                },
+                child: const Text('save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1555,6 +1559,12 @@ class _LoFiProfileScreenState extends State<LoFiProfileScreen> {
   }
 
   Widget _buildIdentityCard() {
+    final auth = context.watch<AuthState>();
+    final name = auth.displayName ?? 'Guest User';
+    final initials = name.isNotEmpty
+        ? name.split(' ').take(2).map((e) => e[0].toUpperCase()).join()
+        : 'GU';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1571,26 +1581,34 @@ class _LoFiProfileScreenState extends State<LoFiProfileScreen> {
               borderRadius: BorderRadius.circular(4),
             ),
             alignment: Alignment.center,
-            child: const Text(
-              'JL',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            child: Text(
+              initials,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  'jayes lankesh',
-                  style: TextStyle(
+                  name,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF2C2C2C),
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
+                  auth.email ?? 'No email',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6A6A6A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
                   'lo-fi architect • since 2024',
                   style: TextStyle(fontSize: 12, color: Color(0xFF6A6A6A)),
                 ),

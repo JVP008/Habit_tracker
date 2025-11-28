@@ -81,8 +81,10 @@ class _NeoBrutalistButtonState extends State<NeoBrutalistButton> {
             ],
           ),
           child: DefaultTextStyle(
-            style: const TextStyle(
-              color: Colors.black,
+            style: TextStyle(
+              color: widget.backgroundColor.computeLuminance() > 0.5
+                  ? Colors.black
+                  : Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
