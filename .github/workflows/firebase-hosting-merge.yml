@@ -1,12 +1,12 @@
-name: Preview Deploy (Pull Request)
+name: Deploy Flutter Web to Firebase Hosting (Merge)
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
 jobs:
-  build_and_preview:
+  build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,10 +23,10 @@ jobs:
       - name: Build Flutter Web
         run: flutter build web --release
 
-      - name: Deploy Preview
+      - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_HABIT_TRACKER_JVP }}"
+          channelId: live
           projectId: habit-tracker-jvp
-          expires: 7d
