@@ -12,7 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # INSTALL FLUTTER
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -24,7 +23,6 @@ jobs:
       - name: Build Flutter Web
         run: flutter build web --release
 
-      # DEPLOY TO FIREBASE
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
